@@ -2,8 +2,10 @@
   "name": "instant-chain",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "dst/chains.js",
   "scripts": {
+    "build": "tsc",
+    "start": "node dst/index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
