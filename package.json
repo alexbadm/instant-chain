@@ -1,0 +1,29 @@
+{
+  "name": "instant-chain",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alexbadm/instant-chain.git"
+  },
+  "keywords": [],
+  "author": "Alex B. <eto.ya@list.ru>",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/alexbadm/instant-chain/issues"
+  },
+  "homepage": "https://github.com/alexbadm/instant-chain#readme",
+  "dependencies": {
+    "@types/cors": "^2.8.3",
+    "@types/express": "^4.11.0",
+    "@types/node": "^9.3.0",
+    "cors": "^2.8.4",
+    "exchange-reactive-state": "git+ssh://git@github.com/alexbadm/exchange-reactive-state.git",
+    "express": "^4.16.2",
+    "incremean": "^2.0.0"
+  }
+}
