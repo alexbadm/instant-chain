@@ -26,7 +26,7 @@ const symbols = [
   'ZRXETH', 'TNBUSD', 'TNBBTC', 'TNBETH', 'SPKUSD', 'SPKBTC', 'SPKETH',
 ];
 
-const onlyCoins = [ 'BTC', 'IOT', 'USD', 'ETH', 'DSH' ];
+const onlyCoins = tradingTokensAll; // [ 'BTC', 'IOT', 'USD', 'ETH', 'DSH' ];
 
 const tradingTokens: string[] = tradingTokensAll.filter((c) => ~onlyCoins.indexOf(c));
 const pairs: string[] = symbols.filter((s) => ~onlyCoins.indexOf(s.slice(0, 3)) && ~onlyCoins.indexOf(s.slice(3)));

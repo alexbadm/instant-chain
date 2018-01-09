@@ -20,7 +20,7 @@ state.start();
 var stats = new statistics_1.default();
 setInterval(function () {
     var before = Date.now();
-    var topChains = chains_1.calculateChains(state.getState(), 6, 0.2);
+    var topChains = chains_1.calculateChains(state.getState(), 6, 0.3);
     var after = Date.now();
     var time = after - before;
     stats.addStatistics('time', time);
@@ -33,6 +33,23 @@ server.get('/state', function (_, res) {
 });
 server.get('/statistics', function (_, res) {
     res.json(stats.getStatistics()).end();
+});
+server.get('/oftenChains/:limit', function (req, res) {
+    var limit = req.params.limit;
+    var st = stats.getStatistics();
+    var oftenChains = Object.keys(st)
+        .sort(function (a1, a2) { return st[a2].avg.getCounter() - st[a1].avg.getCounter(); })
+        .slice(0, limit)
+        .reduce(function (result, key) {
+        var avg = st[key].avg;
+        result[key] = {
+            avgProfit: "+" + Math.round(avg.getMean() * 100) / 100 + "%",
+            count: avg.getCounter(),
+            ratio: Math.round(avg.getCounter() / st.time.avg.getCounter() * 100) + '%',
+        };
+        return result;
+    }, {});
+    res.json(oftenChains).end();
 });
 var port = process.env.PORT || 3000;
 server.listen(port, function () { return global.console.log('server is listening on ' + port); });

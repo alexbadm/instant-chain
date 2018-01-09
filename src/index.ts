@@ -24,7 +24,7 @@ const stats = new Statistics();
 
 setInterval(() => {
   const before = Date.now();
-  const topChains = calculateChains(state.getState(), 6, 0.2);
+  const topChains = calculateChains(state.getState(), 6, 0.3);
   const after = Date.now();
 
   const time = after - before;
@@ -42,6 +42,24 @@ server.get('/state', (_, res) => {
 
 server.get('/statistics', (_, res) => {
   res.json(stats.getStatistics()).end();
+});
+
+server.get('/oftenChains/:limit', (req, res) => {
+  const limit = req.params.limit;
+  const st = stats.getStatistics();
+  const oftenChains = Object.keys(st)
+    .sort((a1, a2) => st[a2].avg.getCounter() - st[a1].avg.getCounter())
+    .slice(0, limit)
+    .reduce((result, key) => {
+      const avg = st[key].avg;
+      result[key] = {
+        avgProfit: `+${Math.round(avg.getMean() * 100) / 100}%`,
+        count: avg.getCounter(),
+        ratio: Math.round(avg.getCounter() / st.time.avg.getCounter() * 100) + '%',
+      };
+      return result;
+    }, {} as { [idx: string]: any });
+  res.json(oftenChains).end();
 });
 
 const port = process.env.PORT || 3000;

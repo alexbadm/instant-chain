@@ -19,7 +19,7 @@ var symbols = [
     'MNABTC', 'MNAETH', 'FUNUSD', 'FUNBTC', 'FUNETH', 'ZRXUSD', 'ZRXBTC',
     'ZRXETH', 'TNBUSD', 'TNBBTC', 'TNBETH', 'SPKUSD', 'SPKBTC', 'SPKETH',
 ];
-var onlyCoins = ['BTC', 'IOT', 'USD', 'ETH', 'DSH'];
+var onlyCoins = tradingTokensAll;
 var tradingTokens = tradingTokensAll.filter(function (c) { return ~onlyCoins.indexOf(c); });
 var pairs = symbols.filter(function (s) { return ~onlyCoins.indexOf(s.slice(0, 3)) && ~onlyCoins.indexOf(s.slice(3)); });
 exports.pairs = pairs;
