@@ -37,10 +37,13 @@ export default class Chains {
   private tradingPairs: string[];
 
   constructor(private exchangeState: ExchangeState, constraint: string[]) {
-    // this.coins = coins;
-    // this.symbols = symbols;
-    this.tradingCoins = coins.filter((c) => ~constraint.indexOf(c));
-    this.tradingPairs = symbols.filter((s) => ~constraint.indexOf(s.slice(0, 3)) && ~constraint.indexOf(s.slice(3)));
+    if (!constraint || !constraint.length) {
+      this.tradingCoins = coins;
+      this.tradingPairs = symbols;
+    } else {
+      this.tradingCoins = coins.filter((c) => ~constraint.indexOf(c));
+      this.tradingPairs = symbols.filter((s) => ~constraint.indexOf(s.slice(0, 3)) && ~constraint.indexOf(s.slice(3)));
+    }
 
     this.pairRules = this.tradingPairs.reduce((result, pair) => {
       const coin = pair.slice(0, 3);

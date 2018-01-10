@@ -23,8 +23,14 @@ var Chains = (function () {
     function Chains(exchangeState, constraint) {
         var _this = this;
         this.exchangeState = exchangeState;
-        this.tradingCoins = exports.coins.filter(function (c) { return ~constraint.indexOf(c); });
-        this.tradingPairs = exports.symbols.filter(function (s) { return ~constraint.indexOf(s.slice(0, 3)) && ~constraint.indexOf(s.slice(3)); });
+        if (!constraint || !constraint.length) {
+            this.tradingCoins = exports.coins;
+            this.tradingPairs = exports.symbols;
+        }
+        else {
+            this.tradingCoins = exports.coins.filter(function (c) { return ~constraint.indexOf(c); });
+            this.tradingPairs = exports.symbols.filter(function (s) { return ~constraint.indexOf(s.slice(0, 3)) && ~constraint.indexOf(s.slice(3)); });
+        }
         this.pairRules = this.tradingPairs.reduce(function (result, pair) {
             var coin = pair.slice(0, 3);
             var currency = pair.slice(3);
