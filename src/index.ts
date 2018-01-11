@@ -1,8 +1,10 @@
+// import { OrderRequest } from 'bfx-api/dist/BfxApi';
 import * as cors from 'cors';
 import ExchangeState from 'exchange-reactive-state';
 import * as express from 'express';
 import Chains from './chains';
 import Statistics from './statistics';
+// import { Store } from '../../exchange-reactive-state/dist/reducers/index';
 
 const apiKey = process.env.API_KEY || '';
 const apiSecret = process.env.API_SECRET || '';
@@ -19,10 +21,25 @@ state.auth(apiKey, apiSecret).catch(authError);
 chains.pairs().forEach((pair) => state.subscribeTicker(pair).catch(subsError));
 state.start();
 
+let allow = true;
+
 setInterval(() => {
   const before = Date.now();
-  const topChains = chains.calculateChains(6, 0.1);
+  const topChains = chains.calculateChains(0, 0.3);
   const after = Date.now();
+
+  const leader = topChains[0];
+  if (leader) {
+    global.console.log('\nBest chain:', leader);
+    if (allow) {
+      allow = false;
+      // state.api.newOrders(leader[4])
+      // .then((msg) => {
+      //   // allow = true;
+      //   global.console.log('trade success', msg);
+      // });
+    }
+  }
 
   const time = after - before;
   stats.addStatistics('time', time);

@@ -17,10 +17,18 @@ var stats = new statistics_1.default();
 state.auth(apiKey, apiSecret).catch(authError);
 chains.pairs().forEach(function (pair) { return state.subscribeTicker(pair).catch(subsError); });
 state.start();
+var allow = true;
 setInterval(function () {
     var before = Date.now();
-    var topChains = chains.calculateChains(6, 0.1);
+    var topChains = chains.calculateChains(0, 0.3);
     var after = Date.now();
+    var leader = topChains[0];
+    if (leader) {
+        global.console.log('\nBest chain:', leader);
+        if (allow) {
+            allow = false;
+        }
+    }
     var time = after - before;
     stats.addStatistics('time', time);
     topChains.forEach(function (res) { return stats.addStatistics(res[1] + "-" + res[2] + "-" + res[3] + "-" + res[1], res[0]); });
