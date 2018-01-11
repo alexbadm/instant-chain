@@ -20,7 +20,7 @@ state.start();
 var allowTrade = true;
 setInterval(function () {
     var before = Date.now();
-    var suggests = chains.calculateChains(0);
+    var suggests = chains.calculateChains(1);
     var topChains = suggests.sort(function (a, b) { return b[0] - a[0]; });
     var after = Date.now();
     var leader = topChains[0];

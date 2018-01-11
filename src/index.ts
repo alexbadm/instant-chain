@@ -25,7 +25,7 @@ let allowTrade = true;
 
 setInterval(() => {
   const before = Date.now();
-  const suggests = chains.calculateChains(0);
+  const suggests = chains.calculateChains(1);
   const topChains = suggests.sort((a, b) => b[0] - a[0]);
   const after = Date.now();
 
