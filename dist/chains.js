@@ -28,6 +28,9 @@ var Chains = (function () {
             this.tradingPairs = exports.symbols;
         }
         else {
+            if (!~constraint.indexOf('USD')) {
+                constraint.push('USD');
+            }
             this.tradingCoins = exports.coins.filter(function (c) { return ~constraint.indexOf(c); });
             this.tradingPairs = exports.symbols.filter(function (s) { return ~constraint.indexOf(s.slice(0, 3)) && ~constraint.indexOf(s.slice(3)); });
         }
@@ -66,11 +69,28 @@ var Chains = (function () {
         });
         return allPrices;
     };
-    Chains.prototype.calculateChains = function (limit, threshold) {
+    Chains.prototype.calculateChains = function (limit, threshold, usdEquiv) {
         var _this = this;
         if (limit === void 0) { limit = 0; }
         if (threshold === void 0) { threshold = 0; }
+        if (usdEquiv === void 0) { usdEquiv = 30; }
         var prices = this.calculateAllPrices();
+        function makeOrderRequest(coin, currency) {
+            var isDirect = prices[coin + currency][2];
+            var sellCoin = isDirect ? coin : currency;
+            var coinSellAmount = (sellCoin === 'USD') ? usdEquiv
+                : usdEquiv / prices[sellCoin + 'USD'][0];
+            var orderRequest = isDirect ? {
+                amount: (-coinSellAmount).toString(10),
+                symbol: 't' + coin + currency,
+                type: 'EXCHANGE MARKET',
+            } : {
+                amount: coinSellAmount.toString(10),
+                symbol: 't' + currency + coin,
+                type: 'EXCHANGE MARKET',
+            };
+            return orderRequest;
+        }
         var results = [];
         this.tradingCoins.forEach(function (baseCurrency) {
             var level1 = _this.pairRules[baseCurrency]
@@ -104,17 +124,23 @@ var Chains = (function () {
                     }
                     var summaryIndex = step2Index * prices[pair3][0];
                     var profit = Math.round((summaryIndex / baseCurrencySum - 1) * 10000) / 100;
-                    results.push([
-                        profit,
-                        baseCurrency,
-                        step1Currency,
-                        step2Currency,
-                    ]);
+                    if (profit > threshold) {
+                        results.push([
+                            profit,
+                            baseCurrency,
+                            step1Currency,
+                            step2Currency,
+                            [
+                                makeOrderRequest(baseCurrency, step1Currency),
+                                makeOrderRequest(step1Currency, step2Currency),
+                                makeOrderRequest(step2Currency, baseCurrency),
+                            ],
+                        ]);
+                    }
                 });
             });
         });
         var leaders = results
-            .filter(function (res) { return res[0] > threshold; })
             .sort(function (a, b) { return b[0] - a[0]; });
         return (limit === 0 || leaders.length <= limit) ? leaders : leaders.slice(0, limit);
     };

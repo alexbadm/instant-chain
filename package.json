@@ -23,6 +23,7 @@
     "@types/cors": "^2.8.3",
     "@types/express": "^4.11.0",
     "@types/node": "^9.3.0",
+    "bfx-api": "git+ssh://git@github.com/alexbadm/bfx-api.git",
     "cors": "^2.8.4",
     "exchange-reactive-state": "git+ssh://git@github.com/alexbadm/exchange-reactive-state.git",
     "express": "^4.16.2",

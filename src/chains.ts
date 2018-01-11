@@ -1,3 +1,4 @@
+import { OrderRequest } from 'bfx-api/dist/BfxApi';
 import ExchangeState from 'exchange-reactive-state';
 
 export interface Rules { [idx: string]: string[]; }
@@ -41,6 +42,10 @@ export default class Chains {
       this.tradingCoins = coins;
       this.tradingPairs = symbols;
     } else {
+      // USD must be always included
+      if (!~constraint.indexOf('USD')) {
+        constraint.push('USD');
+      }
       this.tradingCoins = coins.filter((c) => ~constraint.indexOf(c));
       this.tradingPairs = symbols.filter((s) => ~constraint.indexOf(s.slice(0, 3)) && ~constraint.indexOf(s.slice(3)));
     }
@@ -81,9 +86,27 @@ export default class Chains {
     return allPrices;
   }
 
-  public calculateChains(limit: number = 0, threshold: number = 0) {
+  public calculateChains(limit: number = 0, threshold: number = 0, usdEquiv: number = 30) {
     const prices = this.calculateAllPrices();
-    const results: Array<[ number, string, string, string ]> = [];
+
+    function makeOrderRequest(coin: string, currency: string): OrderRequest {
+      const isDirect = prices[coin + currency][2];
+      const sellCoin = isDirect ? coin : currency;
+      const coinSellAmount = (sellCoin === 'USD') ? usdEquiv
+        : usdEquiv / prices[sellCoin + 'USD'][0];
+      const orderRequest: OrderRequest = isDirect ? {
+        amount: (-coinSellAmount).toString(10),
+        symbol: 't' + coin + currency,
+        type: 'EXCHANGE MARKET',
+      } : {
+        amount: coinSellAmount.toString(10),
+        symbol: 't' + currency + coin,
+        type: 'EXCHANGE MARKET',
+      };
+      return orderRequest;
+    }
+
+    const results: Array<[ number, string, string, string, OrderRequest[] ]> = [];
     this.tradingCoins.forEach((baseCurrency) => {
       const level1 = this.pairRules[baseCurrency]
         ? this.pairRules[baseCurrency].concat(this.pairReverseRules[baseCurrency])
@@ -110,7 +133,6 @@ export default class Chains {
         }
 
         const step1Index = baseCurrencySum * prices[pair][0];
-
         level2.forEach((step2Currency) => {
           const pair2 = step1Currency + step2Currency;
           if (!prices[pair2]) {
@@ -126,18 +148,24 @@ export default class Chains {
 
           const summaryIndex = step2Index * prices[pair3][0];
           const profit = Math.round((summaryIndex / baseCurrencySum - 1) * 10000) / 100;
-          results.push([
-            profit,
-            baseCurrency,
-            step1Currency,
-            step2Currency,
-          ]);
+          if (profit > threshold) {
+            results.push([
+              profit,
+              baseCurrency,
+              step1Currency,
+              step2Currency,
+              [
+                makeOrderRequest(baseCurrency, step1Currency),
+                makeOrderRequest(step1Currency, step2Currency),
+                makeOrderRequest(step2Currency, baseCurrency),
+              ],
+            ]);
+          }
         });
         // global.console.log('price for pair', pair, 'is', prices[pair]);
       });
     });
     const leaders = results
-      .filter((res) => res[0] > threshold)
       .sort((a, b) => b[0] - a[0]);
 
     return (limit === 0 || leaders.length <= limit) ? leaders : leaders.slice(0, limit);

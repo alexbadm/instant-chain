@@ -1,3 +1,4 @@
+import { OrderRequest } from 'bfx-api/dist/BfxApi';
 import ExchangeState from 'exchange-reactive-state';
 export interface Rules {
     [idx: string]: string[];
@@ -15,7 +16,7 @@ export default class Chains {
     private tradingPairs;
     constructor(exchangeState: ExchangeState, constraint: string[]);
     calculateAllPrices(): Prices;
-    calculateChains(limit?: number, threshold?: number): [number, string, string, string][];
+    calculateChains(limit?: number, threshold?: number, usdEquiv?: number): [number, string, string, string, OrderRequest[]][];
     coins(): string[];
     pairs(): string[];
 }
