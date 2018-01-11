@@ -5,6 +5,10 @@ export interface Rules { [idx: string]: string[]; }
 
 export interface Prices { [pair: string]: [ number, number, boolean ]; }
 
+export type Chain = [ string, string, string ];
+
+export type SuggestedChain = [ number, string, string, string, OrderRequest[] ];
+
 // fetch('https://api.bitfinex.com/v1/symbols').then((resp) => resp.json()).then((s) => symbols = s);
 export const coins = [
   'BTC', 'USD', 'LTC', 'ETH', 'ETC', 'RRT', 'ZEC', 'XMR', 'DSH', 'EUR', 'XRP',
@@ -28,14 +32,15 @@ export const symbols = [
 ];
 
 export default class Chains {
-  // private coins: string[];
-  // private symbols: string[];
+  public readonly fee: number = 0.002;
 
   private pairRules: Rules;
   private pairReverseRules: Rules;
 
   private tradingCoins: string[];
   private tradingPairs: string[];
+
+  private allChains: Chain[];
 
   constructor(private exchangeState: ExchangeState, constraint: string[]) {
     if (!constraint || !constraint.length) {
@@ -71,6 +76,24 @@ export default class Chains {
       });
       return result;
     }, {} as Rules);
+
+    this.allChains = this.tradingCoins.reduce((results, coin1) => {
+      this.makeLevel(coin1).forEach((coin2) => {
+        this.makeLevel(coin2).forEach((coin3) => {
+          if (coin3 !== coin1) {
+            results.push([ coin1, coin2, coin3 ]);
+          }
+        });
+      });
+      return results;
+    }, [] as Chain[]);
+  }
+
+  public makeLevel(coin: string): string[] {
+    return (this.pairRules[coin] && this.pairReverseRules[coin]
+      ? this.pairRules[coin].concat(this.pairReverseRules[coin])
+      : this.pairRules[coin] || this.pairReverseRules[coin] || [])
+      .filter((c) => c !== coin);
   }
 
   public calculateAllPrices(): Prices {
@@ -86,89 +109,64 @@ export default class Chains {
     return allPrices;
   }
 
-  public calculateChains(limit: number = 0, threshold: number = 0, usdEquiv: number = 30) {
+  public calculateChains(threshold: number = 0, usdToTrade: number = 30): SuggestedChain[] {
     const prices = this.calculateAllPrices();
+    const fee = this.fee;
 
-    function makeOrderRequest(coin: string, currency: string): OrderRequest {
+    function makeOrderRequest(coin: string, currency: string, fees: number = 0): OrderRequest {
       const isDirect = prices[coin + currency][2];
+      const price = (prices[coin + currency][0]).toString(10);
       const sellCoin = isDirect ? coin : currency;
-      const coinSellAmount = (sellCoin === 'USD') ? usdEquiv
-        : usdEquiv / prices[sellCoin + 'USD'][0];
+      const feeRate = 1 - fees * fee;
+      const coinSellAmount = ((sellCoin === 'USD') ? usdToTrade
+        : usdToTrade / prices[sellCoin + 'USD'][0]) * feeRate;
+
       const orderRequest: OrderRequest = isDirect ? {
         amount: (-coinSellAmount).toString(10),
+        price,
         symbol: 't' + coin + currency,
         type: 'EXCHANGE MARKET',
       } : {
         amount: coinSellAmount.toString(10),
+        price,
         symbol: 't' + currency + coin,
         type: 'EXCHANGE MARKET',
       };
       return orderRequest;
     }
 
-    const results: Array<[ number, string, string, string, OrderRequest[] ]> = [];
-    this.tradingCoins.forEach((baseCurrency) => {
-      const level1 = this.pairRules[baseCurrency]
-        ? this.pairRules[baseCurrency].concat(this.pairReverseRules[baseCurrency])
-        : this.pairReverseRules[baseCurrency];
-      // global.console.log('baseCurrency', baseCurrency, 'level1', level1);
-      if (!level1) {
-        return;
+    const baseCurrencySum = 100;
+    const summaryFeeRate = 1 - 3 * fee;
+
+    return this.allChains.reduce((result, chain) => {
+      const prices1 = prices[chain[0] + chain[1]];
+      const prices2 = prices[chain[1] + chain[2]];
+      const prices3 = prices[chain[2] + chain[0]];
+      if (!prices1 || !prices2 || !prices3) {
+        return result;
       }
 
-      const baseCurrencySum = 100;
+      const step1Index = baseCurrencySum * prices1[0];
+      const step2Index = step1Index * prices2[0];
+      const summaryIndex = step2Index * prices3[0];
+      const profit = Math.round((summaryIndex / baseCurrencySum - 1) * summaryFeeRate * 10000) / 100;
 
-      level1.forEach((step1Currency) => {
-        const pair = baseCurrency + step1Currency;
-        if (!prices[pair]) {
-          return;
-        }
+      if (profit > threshold) {
+        result.push([
+          profit,
+          chain[0],
+          chain[1],
+          chain[2],
+          [
+            makeOrderRequest(chain[0], chain[1], 0),
+            makeOrderRequest(chain[1], chain[2], 1),
+            makeOrderRequest(chain[2], chain[0], 2),
+          ],
+        ]);
+      }
 
-        const level2 = this.pairRules[step1Currency]
-          ? this.pairRules[step1Currency].concat(this.pairReverseRules[step1Currency])
-          : this.pairReverseRules[step1Currency];
-
-        if (!level2) {
-          return;
-        }
-
-        const step1Index = baseCurrencySum * prices[pair][0];
-        level2.forEach((step2Currency) => {
-          const pair2 = step1Currency + step2Currency;
-          if (!prices[pair2]) {
-            return;
-          }
-
-          const step2Index = step1Index * prices[pair2][0];
-
-          const pair3 = step2Currency + baseCurrency;
-          if (!prices[pair3]) {
-            return;
-          }
-
-          const summaryIndex = step2Index * prices[pair3][0];
-          const profit = Math.round((summaryIndex / baseCurrencySum - 1) * 10000) / 100;
-          if (profit > threshold) {
-            results.push([
-              profit,
-              baseCurrency,
-              step1Currency,
-              step2Currency,
-              [
-                makeOrderRequest(baseCurrency, step1Currency),
-                makeOrderRequest(step1Currency, step2Currency),
-                makeOrderRequest(step2Currency, baseCurrency),
-              ],
-            ]);
-          }
-        });
-        // global.console.log('price for pair', pair, 'is', prices[pair]);
-      });
-    });
-    const leaders = results
-      .sort((a, b) => b[0] - a[0]);
-
-    return (limit === 0 || leaders.length <= limit) ? leaders : leaders.slice(0, limit);
+      return result;
+    }, [] as SuggestedChain[]);
   }
 
   public coins() {
@@ -177,5 +175,9 @@ export default class Chains {
 
   public pairs() {
     return this.tradingPairs;
+  }
+
+  public chains() {
+    return this.allChains;
   }
 }

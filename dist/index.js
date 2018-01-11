@@ -17,16 +17,22 @@ var stats = new statistics_1.default();
 state.auth(apiKey, apiSecret).catch(authError);
 chains.pairs().forEach(function (pair) { return state.subscribeTicker(pair).catch(subsError); });
 state.start();
-var allow = true;
+var allowTrade = true;
 setInterval(function () {
     var before = Date.now();
-    var topChains = chains.calculateChains(0, 0.3);
+    var suggests = chains.calculateChains(0);
+    var topChains = suggests.sort(function (a, b) { return b[0] - a[0]; });
     var after = Date.now();
     var leader = topChains[0];
     if (leader) {
         global.console.log('\nBest chain:', leader);
-        if (allow) {
-            allow = false;
+        if (allowTrade) {
+            allowTrade = false;
+            state.api.newOrders(leader[4])
+                .then(function (msg) {
+                global.console.log('trade success', msg);
+            })
+                .catch(function (msg) { return global.console.log('trade fail', msg); });
         }
     }
     var time = after - before;

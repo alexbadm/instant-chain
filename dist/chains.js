@@ -23,6 +23,7 @@ var Chains = (function () {
     function Chains(exchangeState, constraint) {
         var _this = this;
         this.exchangeState = exchangeState;
+        this.fee = 0.002;
         if (!constraint || !constraint.length) {
             this.tradingCoins = exports.coins;
             this.tradingPairs = exports.symbols;
@@ -56,7 +57,23 @@ var Chains = (function () {
             });
             return result;
         }, {});
+        this.allChains = this.tradingCoins.reduce(function (results, coin1) {
+            _this.makeLevel(coin1).forEach(function (coin2) {
+                _this.makeLevel(coin2).forEach(function (coin3) {
+                    if (coin3 !== coin1) {
+                        results.push([coin1, coin2, coin3]);
+                    }
+                });
+            });
+            return results;
+        }, []);
     }
+    Chains.prototype.makeLevel = function (coin) {
+        return (this.pairRules[coin] && this.pairReverseRules[coin]
+            ? this.pairRules[coin].concat(this.pairReverseRules[coin])
+            : this.pairRules[coin] || this.pairReverseRules[coin] || [])
+            .filter(function (c) { return c !== coin; });
+    };
     Chains.prototype.calculateAllPrices = function () {
         var rates = this.exchangeState.getState().rates;
         var allPrices = {};
@@ -69,86 +86,69 @@ var Chains = (function () {
         });
         return allPrices;
     };
-    Chains.prototype.calculateChains = function (limit, threshold, usdEquiv) {
-        var _this = this;
-        if (limit === void 0) { limit = 0; }
+    Chains.prototype.calculateChains = function (threshold, usdToTrade) {
         if (threshold === void 0) { threshold = 0; }
-        if (usdEquiv === void 0) { usdEquiv = 30; }
+        if (usdToTrade === void 0) { usdToTrade = 30; }
         var prices = this.calculateAllPrices();
-        function makeOrderRequest(coin, currency) {
+        var fee = this.fee;
+        function makeOrderRequest(coin, currency, fees) {
+            if (fees === void 0) { fees = 0; }
             var isDirect = prices[coin + currency][2];
+            var price = (prices[coin + currency][0]).toString(10);
             var sellCoin = isDirect ? coin : currency;
-            var coinSellAmount = (sellCoin === 'USD') ? usdEquiv
-                : usdEquiv / prices[sellCoin + 'USD'][0];
+            var feeRate = 1 - fees * fee;
+            var coinSellAmount = ((sellCoin === 'USD') ? usdToTrade
+                : usdToTrade / prices[sellCoin + 'USD'][0]) * feeRate;
             var orderRequest = isDirect ? {
                 amount: (-coinSellAmount).toString(10),
+                price: price,
                 symbol: 't' + coin + currency,
                 type: 'EXCHANGE MARKET',
             } : {
                 amount: coinSellAmount.toString(10),
+                price: price,
                 symbol: 't' + currency + coin,
                 type: 'EXCHANGE MARKET',
             };
             return orderRequest;
         }
-        var results = [];
-        this.tradingCoins.forEach(function (baseCurrency) {
-            var level1 = _this.pairRules[baseCurrency]
-                ? _this.pairRules[baseCurrency].concat(_this.pairReverseRules[baseCurrency])
-                : _this.pairReverseRules[baseCurrency];
-            if (!level1) {
-                return;
+        var baseCurrencySum = 100;
+        var summaryFeeRate = 1 - 3 * fee;
+        return this.allChains.reduce(function (result, chain) {
+            var prices1 = prices[chain[0] + chain[1]];
+            var prices2 = prices[chain[1] + chain[2]];
+            var prices3 = prices[chain[2] + chain[0]];
+            if (!prices1 || !prices2 || !prices3) {
+                return result;
             }
-            var baseCurrencySum = 100;
-            level1.forEach(function (step1Currency) {
-                var pair = baseCurrency + step1Currency;
-                if (!prices[pair]) {
-                    return;
-                }
-                var level2 = _this.pairRules[step1Currency]
-                    ? _this.pairRules[step1Currency].concat(_this.pairReverseRules[step1Currency])
-                    : _this.pairReverseRules[step1Currency];
-                if (!level2) {
-                    return;
-                }
-                var step1Index = baseCurrencySum * prices[pair][0];
-                level2.forEach(function (step2Currency) {
-                    var pair2 = step1Currency + step2Currency;
-                    if (!prices[pair2]) {
-                        return;
-                    }
-                    var step2Index = step1Index * prices[pair2][0];
-                    var pair3 = step2Currency + baseCurrency;
-                    if (!prices[pair3]) {
-                        return;
-                    }
-                    var summaryIndex = step2Index * prices[pair3][0];
-                    var profit = Math.round((summaryIndex / baseCurrencySum - 1) * 10000) / 100;
-                    if (profit > threshold) {
-                        results.push([
-                            profit,
-                            baseCurrency,
-                            step1Currency,
-                            step2Currency,
-                            [
-                                makeOrderRequest(baseCurrency, step1Currency),
-                                makeOrderRequest(step1Currency, step2Currency),
-                                makeOrderRequest(step2Currency, baseCurrency),
-                            ],
-                        ]);
-                    }
-                });
-            });
-        });
-        var leaders = results
-            .sort(function (a, b) { return b[0] - a[0]; });
-        return (limit === 0 || leaders.length <= limit) ? leaders : leaders.slice(0, limit);
+            var step1Index = baseCurrencySum * prices1[0];
+            var step2Index = step1Index * prices2[0];
+            var summaryIndex = step2Index * prices3[0];
+            var profit = Math.round((summaryIndex / baseCurrencySum - 1) * summaryFeeRate * 10000) / 100;
+            if (profit > threshold) {
+                result.push([
+                    profit,
+                    chain[0],
+                    chain[1],
+                    chain[2],
+                    [
+                        makeOrderRequest(chain[0], chain[1], 0),
+                        makeOrderRequest(chain[1], chain[2], 1),
+                        makeOrderRequest(chain[2], chain[0], 2),
+                    ],
+                ]);
+            }
+            return result;
+        }, []);
     };
     Chains.prototype.coins = function () {
         return this.tradingCoins;
     };
     Chains.prototype.pairs = function () {
         return this.tradingPairs;
+    };
+    Chains.prototype.chains = function () {
+        return this.allChains;
     };
     return Chains;
 }());

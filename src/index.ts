@@ -21,23 +21,25 @@ state.auth(apiKey, apiSecret).catch(authError);
 chains.pairs().forEach((pair) => state.subscribeTicker(pair).catch(subsError));
 state.start();
 
-let allow = true;
+let allowTrade = true;
 
 setInterval(() => {
   const before = Date.now();
-  const topChains = chains.calculateChains(0, 0.3);
+  const suggests = chains.calculateChains(0);
+  const topChains = suggests.sort((a, b) => b[0] - a[0]);
   const after = Date.now();
 
   const leader = topChains[0];
   if (leader) {
     global.console.log('\nBest chain:', leader);
-    if (allow) {
-      allow = false;
-      // state.api.newOrders(leader[4])
-      // .then((msg) => {
-      //   // allow = true;
-      //   global.console.log('trade success', msg);
-      // });
+    if (allowTrade) {
+      allowTrade = false;
+      state.api.newOrders(leader[4])
+      .then((msg) => {
+        // allowTrade = true;
+        global.console.log('trade success', msg);
+      })
+      .catch((msg) => global.console.log('trade fail', msg));
     }
   }
 
