@@ -1,4 +1,4 @@
-import { OrderRequest } from 'bfx-api/dist/BfxApi';
+import { OrderRequest } from 'bfx-api/dist/bitfinexTypes';
 import ExchangeState from 'exchange-reactive-state';
 
 export interface Rules { [idx: string]: string[]; }
@@ -117,6 +117,7 @@ export default class Chains {
       const isDirect = prices[coin + currency][2];
       const price = (prices[coin + currency][0]).toString(10);
       const sellCoin = isDirect ? coin : currency;
+      // tslint:disable-next-line:no-shadowed-variable
       const feeRate = 1 - fees * fee;
       const coinSellAmount = ((sellCoin === 'USD') ? usdToTrade
         : usdToTrade / prices[sellCoin + 'USD'][0]) * feeRate;
@@ -136,7 +137,7 @@ export default class Chains {
     }
 
     const baseCurrencySum = 100;
-    const summaryFeeRate = 1 - 3 * fee;
+    const feeRate = 1 - this.fee;
 
     return this.allChains.reduce((result, chain) => {
       const prices1 = prices[chain[0] + chain[1]];
@@ -146,10 +147,10 @@ export default class Chains {
         return result;
       }
 
-      const step1Index = baseCurrencySum * prices1[0];
-      const step2Index = step1Index * prices2[0];
-      const summaryIndex = step2Index * prices3[0];
-      const profit = Math.round((summaryIndex / baseCurrencySum - 1) * summaryFeeRate * 10000) / 100;
+      const step1Index = feeRate * baseCurrencySum * prices1[0];
+      const step2Index = feeRate * step1Index * prices2[0];
+      const summaryIndex = feeRate * step2Index * prices3[0];
+      const profit = Math.round((summaryIndex / baseCurrencySum - 1) * 10000) / 100;
 
       if (profit > threshold) {
         result.push([

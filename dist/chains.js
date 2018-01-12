@@ -113,7 +113,7 @@ var Chains = (function () {
             return orderRequest;
         }
         var baseCurrencySum = 100;
-        var summaryFeeRate = 1 - 3 * fee;
+        var feeRate = 1 - this.fee;
         return this.allChains.reduce(function (result, chain) {
             var prices1 = prices[chain[0] + chain[1]];
             var prices2 = prices[chain[1] + chain[2]];
@@ -121,10 +121,10 @@ var Chains = (function () {
             if (!prices1 || !prices2 || !prices3) {
                 return result;
             }
-            var step1Index = baseCurrencySum * prices1[0];
-            var step2Index = step1Index * prices2[0];
-            var summaryIndex = step2Index * prices3[0];
-            var profit = Math.round((summaryIndex / baseCurrencySum - 1) * summaryFeeRate * 10000) / 100;
+            var step1Index = feeRate * baseCurrencySum * prices1[0];
+            var step2Index = feeRate * step1Index * prices2[0];
+            var summaryIndex = feeRate * step2Index * prices3[0];
+            var profit = Math.round((summaryIndex / baseCurrencySum - 1) * 10000) / 100;
             if (profit > threshold) {
                 result.push([
                     profit,

@@ -1,4 +1,4 @@
-import { OrderRequest } from 'bfx-api/dist/BfxApi';
+import { OrderRequest } from 'bfx-api/dist/bitfinexTypes';
 import ExchangeState from 'exchange-reactive-state';
 export interface Rules {
     [idx: string]: string[];
