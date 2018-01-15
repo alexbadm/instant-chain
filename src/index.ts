@@ -25,7 +25,7 @@ let allowTrade = true;
 
 setInterval(() => {
   const before = Date.now();
-  const suggests = chains.calculateChains(.4);
+  const suggests = chains.calculateChains(.1);
   const topChains = suggests.sort((a, b) => b[0] - a[0]);
   const after = Date.now();
 
@@ -34,16 +34,16 @@ setInterval(() => {
     global.console.log('\nBest chain:', leader);
     if (allowTrade) {
       allowTrade = false;
-      state.api.trades(leader[4])
-      .then((msgs) => {
-        // allowTrade = true;
-        global.console.log('\ntrade success:\n', msgs);
-      })
-      .catch((msg) => global.console.log('\ntrade fail:\n', msg))
-      .then(() => {
-        global.console.log('\nstate:\n', state.getState());
-        process.exit(0);
-      });
+      // state.api.trades(leader[4])
+      // .then((msgs) => {
+      //   // allowTrade = true;
+      //   global.console.log('\ntrade success:\n', msgs);
+      // })
+      // .catch((msg) => global.console.log('\ntrade fail:\n', msg))
+      // .then(() => {
+      //   global.console.log('\nstate:\n', state.getState());
+      //   process.exit(0);
+      // });
     }
   }
 

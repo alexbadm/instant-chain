@@ -20,7 +20,7 @@ state.start();
 var allowTrade = true;
 setInterval(function () {
     var before = Date.now();
-    var suggests = chains.calculateChains(.4);
+    var suggests = chains.calculateChains(.1);
     var topChains = suggests.sort(function (a, b) { return b[0] - a[0]; });
     var after = Date.now();
     var leader = topChains[0];
@@ -28,15 +28,6 @@ setInterval(function () {
         global.console.log('\nBest chain:', leader);
         if (allowTrade) {
             allowTrade = false;
-            state.api.trades(leader[4])
-                .then(function (msgs) {
-                global.console.log('\ntrade success:\n', msgs);
-            })
-                .catch(function (msg) { return global.console.log('\ntrade fail:\n', msg); })
-                .then(function () {
-                global.console.log('\nstate:\n', state.getState());
-                process.exit(0);
-            });
         }
     }
     var time = after - before;

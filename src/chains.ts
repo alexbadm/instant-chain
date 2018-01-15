@@ -115,25 +115,20 @@ export default class Chains {
 
     function makeOrderRequest(coin: string, currency: string, fees: number = 0): OrderRequest {
       const isDirect = prices[coin + currency][2];
-      const price = (prices[coin + currency][0]).toString(10);
+      const pair = isDirect ? coin + currency : currency + coin;
+
       const sellCoin = isDirect ? coin : currency;
       // tslint:disable-next-line:no-shadowed-variable
       const feeRate = 1 - fees * fee;
       const coinSellAmount = ((sellCoin === 'USD') ? usdToTrade
         : usdToTrade / prices[sellCoin + 'USD'][0]) * feeRate;
 
-      const orderRequest: OrderRequest = isDirect ? {
-        amount: (-coinSellAmount).toString(10),
-        price,
-        symbol: 't' + coin + currency,
-        type: 'EXCHANGE MARKET',
-      } : {
-        amount: coinSellAmount.toString(10),
-        price,
-        symbol: 't' + currency + coin,
+      return {
+        amount: (isDirect ? -coinSellAmount : coinSellAmount).toString(10),
+        price: (prices[pair][0]).toString(10),
+        symbol: 't' + pair,
         type: 'EXCHANGE MARKET',
       };
-      return orderRequest;
     }
 
     const baseCurrencySum = 100;

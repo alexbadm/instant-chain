@@ -94,23 +94,17 @@ var Chains = (function () {
         function makeOrderRequest(coin, currency, fees) {
             if (fees === void 0) { fees = 0; }
             var isDirect = prices[coin + currency][2];
-            var price = (prices[coin + currency][0]).toString(10);
+            var pair = isDirect ? coin + currency : currency + coin;
             var sellCoin = isDirect ? coin : currency;
             var feeRate = 1 - fees * fee;
             var coinSellAmount = ((sellCoin === 'USD') ? usdToTrade
                 : usdToTrade / prices[sellCoin + 'USD'][0]) * feeRate;
-            var orderRequest = isDirect ? {
-                amount: (-coinSellAmount).toString(10),
-                price: price,
-                symbol: 't' + coin + currency,
-                type: 'EXCHANGE MARKET',
-            } : {
-                amount: coinSellAmount.toString(10),
-                price: price,
-                symbol: 't' + currency + coin,
+            return {
+                amount: (isDirect ? -coinSellAmount : coinSellAmount).toString(10),
+                price: (prices[pair][0]).toString(10),
+                symbol: 't' + pair,
                 type: 'EXCHANGE MARKET',
             };
-            return orderRequest;
         }
         var baseCurrencySum = 100;
         var feeRate = 1 - this.fee;
